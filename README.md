@@ -1,7 +1,7 @@
 build commands:
-'''
+```
 cargo build --bin <client/server> --release
-'''
+```
 
 Basic TCP server:
 multithreaded
