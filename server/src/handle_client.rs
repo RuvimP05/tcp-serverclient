@@ -1,17 +1,28 @@
+use native_tls::{TlsAcceptor, TlsStream};
+
 use crate::auth_user;
 use std::{
-    io::{Read, Write},
+    io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
 };
 
 type Result<T> = std::result::Result<T, ()>;
+type EncryptedStream = TlsStream<TcpStream>;
 
-pub fn handle_client(mut stream: TcpStream) -> Result<()> {
-    let user: SocketAddr = stream
-        .peer_addr()
-        .map_err(|err| eprintln!("could not obtain peer address. Error: {}", err))?;
+pub fn handle_client(stream: TcpStream, acceptor: TlsAcceptor) -> Result<()> {
+    let mut stream: EncryptedStream = match acceptor.accept(stream) {
+        Ok(stream) => stream,
+        Err(err) => {
+            eprintln!("Error accepting TLS connection: {:?}", err);
+            return Err(());
+        }
+    };
+    let peer: SocketAddr = stream.get_ref().peer_addr().map_err(|err: io::Error| {
+        eprintln!("could not obtain peer address. Error: {}", err);
+    })?;
     //AUTHENTICATION
-    let name: String = auth_user::authenticate_client(&mut stream, user)?;
+    let name: String = auth_user::authenticate_client(&mut stream, peer)?;
+
     //MAIN LOOP
     let mut buffer: [u8; 1024] = [0; 1024];
     loop {
@@ -20,19 +31,21 @@ pub fn handle_client(mut stream: TcpStream) -> Result<()> {
             Ok(size) => {
                 if size == 0 {
                     // End of stream, connection closed by the client
-                    println!("Client {} disconnected.", name);
+                    println!("{} disconnected.", name);
                     break;
                 }
                 let message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer);
                 print!("user {} inputted: {}", name, message);
 
                 //send response to keep client active
-                let _ = stream.write_all(&[0]).map_err(|err| {
-                    eprintln!("Could not send response to client {}. Error: {}", name, err)
-                });
+                let _ = stream
+                    .write_all(message.as_bytes())
+                    .map_err(|err: io::Error| {
+                        eprintln!("Could not send response to {}. Error: {}", name, err)
+                    });
             }
-            Err(e) => {
-                eprintln!("Error reading from client: {}", e);
+            Err(err) => {
+                eprintln!("Error reading from {}. Error: {}", name, err);
                 break;
             }
         }

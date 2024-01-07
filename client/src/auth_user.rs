@@ -1,24 +1,32 @@
+use native_tls::TlsStream;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{self, BufReader, Read, Write};
 use std::net::TcpStream;
-pub fn authenticate_user(stream: &mut TcpStream) {
-    let file: File = File::open("./key").expect("Failed to open key file");
+
+type EncryptedStream = TlsStream<TcpStream>;
+
+pub fn authenticate_user(stream: &mut EncryptedStream) {
+    let file: File = File::open("./key").expect("Could not open key file");
     let mut key: String = "".to_string();
-    BufReader::new(file)
+    let _ = BufReader::new(file)
         .read_to_string(&mut key)
-        .expect("Failed to read key");
+        .map_err(|err| eprintln!("Could not read key. Error: {}", err));
 
-    stream
+    let _ = stream
         .write_all(key.trim().as_bytes())
-        .expect("Failed to write to server");
+        .map_err(|err: io::Error| {
+            eprintln!("Could not write to server. Error: {}", err);
+        });
 
-    let mut auth_buf: [u8; 1] = [0; 1];
-    let size: usize = stream
-        .read(&mut auth_buf)
-        .expect("could not recieve authentication from server");
-    let auth_status: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&auth_buf[..size]);
-    if auth_status != "1" {
+    let mut auth_buf: [u8; 1024] = [0; 1024];
+    let size: usize = stream.read(&mut auth_buf).unwrap_or_else(|err: io::Error| {
+        eprintln!("Could not read authentication packet. Error: {}", err);
+        0
+    });
+    // println!("{:?}", auth_buf);
+    let auth_string = String::from_utf8_lossy(&auth_buf[..size]);
+    if auth_string.as_ref() != "1" {
         println!("Could not authenticate");
-        return;
+        std::process::exit(3);
     }
 }

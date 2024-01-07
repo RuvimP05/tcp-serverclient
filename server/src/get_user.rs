@@ -1,6 +1,9 @@
+use native_tls::TlsStream;
 use std::{borrow::Cow, io::Read, net::TcpStream};
 
-pub fn get_username(stream: &mut TcpStream) -> String {
+type EncryptedStream = TlsStream<TcpStream>;
+
+pub fn get_username(stream: &mut EncryptedStream) -> String {
     let mut buffer: Vec<u8> = vec![0; 16];
     let name = match stream.read(&mut buffer) {
         Ok(size) => {
