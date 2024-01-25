@@ -1,15 +1,16 @@
 use native_tls::{TlsAcceptor, TlsStream};
-
-use crate::auth_user;
 use std::{
     io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
 };
 
+use crate::auth_user;
+
 type Result<T> = std::result::Result<T, ()>;
 type EncryptedStream = TlsStream<TcpStream>;
 
 pub fn handle_client(stream: TcpStream, acceptor: TlsAcceptor) -> Result<()> {
+    //Accept incoming stream
     let mut stream: EncryptedStream = match acceptor.accept(stream) {
         Ok(stream) => stream,
         Err(err) => {
@@ -17,10 +18,11 @@ pub fn handle_client(stream: TcpStream, acceptor: TlsAcceptor) -> Result<()> {
             return Err(());
         }
     };
+    //Get peer address
     let peer: SocketAddr = stream.get_ref().peer_addr().map_err(|err: io::Error| {
         eprintln!("could not obtain peer address. Error: {}", err);
     })?;
-    //AUTHENTICATION
+    //Authentication using matching keys
     let name: String = auth_user::authenticate_client(&mut stream, peer)?;
 
     //MAIN LOOP
@@ -37,7 +39,7 @@ pub fn handle_client(stream: TcpStream, acceptor: TlsAcceptor) -> Result<()> {
                 let message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer);
                 print!("user {} inputted: {}", name, message);
 
-                //send response to keep client active
+                //Send response
                 let _ = stream
                     .write_all(message.as_bytes())
                     .map_err(|err: io::Error| {

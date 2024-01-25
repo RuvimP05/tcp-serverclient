@@ -26,7 +26,7 @@ fn main() {
     if arg.len() != 2 {
         eprintln!("Usage: ./client <IP.ADDR:PORT>")
     }
-    let certificate = match Certificate::from_pem(include_bytes!("cert.pem")) {
+    let certificate: Certificate = match Certificate::from_pem(include_bytes!("cert.pem")) {
         Ok(cert) => cert,
         Err(err) => {
             eprintln!("Could not generate certificate. Error: {}", err);
@@ -55,7 +55,7 @@ fn main() {
         print!("Enter a message (or 'exit' to quit): ");
         let _ = io::stdout()
             .flush()
-            .map_err(|err| eprintln!("Could not flush io. Error: {}", err));
+            .map_err(|err: io::Error| eprintln!("Could not flush io. Error: {}", err));
 
         stdin().read_line(&mut input).expect("Failed to read line");
 

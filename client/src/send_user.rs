@@ -1,7 +1,8 @@
-use crate::{clear_terminal, truncate};
 use native_tls::TlsStream;
 use std::io::{self, stdin, Write};
 use std::net::TcpStream;
+
+use crate::{clear_terminal, truncate};
 
 type EncryptedStream = TlsStream<TcpStream>;
 

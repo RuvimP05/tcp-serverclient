@@ -1,16 +1,15 @@
 use native_tls::{Identity, TlsAcceptor};
 use std::io;
 use std::net::TcpListener;
-use std::result;
 
 mod auth_user;
 mod get_user;
 mod handle_client;
 
-type Result<T> = result::Result<T, ()>;
+type Result<T> = std::result::Result<T, ()>;
 
 fn main() -> Result<()> {
-    // Bind the server to a specific address and port
+    //Bind the server to a specific address and port
     let listener: TcpListener = TcpListener::bind("0.0.0.0:6969")
         .map_err(|err: io::Error| eprintln!("ERROR: could not bind to address: {}", err))?;
     println!("Server listening on port 6969");
@@ -27,11 +26,11 @@ fn main() -> Result<()> {
                     let acceptor: TlsAcceptor =
                         TlsAcceptor::new(identity).expect("Failed to create TLS acceptor");
                     let _ = handle_client::handle_client(stream, acceptor)
-                        .map_err(|err| eprintln!("Failed to handle client. Error: {:?}", err));
+                        .map_err(|err: ()| eprintln!("Failed to handle client. Error: {:?}", err));
                 });
             }
-            Err(e) => {
-                eprintln!("Error accepting connection: {}", e);
+            Err(err) => {
+                eprintln!("Error accepting connection: {}", err);
             }
         }
     }

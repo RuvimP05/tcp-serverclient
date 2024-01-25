@@ -10,7 +10,7 @@ pub fn authenticate_user(stream: &mut EncryptedStream) {
     let mut key: String = "".to_string();
     let _ = BufReader::new(file)
         .read_to_string(&mut key)
-        .map_err(|err| eprintln!("Could not read key. Error: {}", err));
+        .map_err(|err: io::Error| eprintln!("Could not read key. Error: {}", err));
 
     let _ = stream
         .write_all(key.trim().as_bytes())
@@ -24,7 +24,7 @@ pub fn authenticate_user(stream: &mut EncryptedStream) {
         0
     });
     // println!("{:?}", auth_buf);
-    let auth_string = String::from_utf8_lossy(&auth_buf[..size]);
+    let auth_string: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&auth_buf[..size]);
     if auth_string.as_ref() != "1" {
         println!("Could not authenticate");
         std::process::exit(3);
