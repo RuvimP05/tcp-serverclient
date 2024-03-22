@@ -11,7 +11,7 @@ type Result<T> = std::result::Result<T, ()>;
 fn main() -> Result<()> {
     //Bind the server to a specific address and port
     let listener: TcpListener = TcpListener::bind("0.0.0.0:6969")
-        .map_err(|err: io::Error| eprintln!("ERROR: could not bind to address: {}", err))?;
+        .map_err(|err: io::Error| eprintln!("Failed to bind to address. Error: {}", err))?;
     println!("Server listening on port 6969");
 
     // Accept incoming connections and process in a loop
@@ -26,11 +26,11 @@ fn main() -> Result<()> {
                     let acceptor: TlsAcceptor =
                         TlsAcceptor::new(identity).expect("Failed to create TLS acceptor");
                     let _ = handle_client::handle_client(stream, acceptor)
-                        .map_err(|err: ()| eprintln!("Failed to handle client. Error: {:?}", err));
+                        .map_err(|err| eprintln!("Failed to handle client. Error: {:?}", err));
                 });
             }
             Err(err) => {
-                eprintln!("Error accepting connection: {}", err);
+                eprintln!("Failed accepting connection. Error: {}", err);
             }
         }
     }
